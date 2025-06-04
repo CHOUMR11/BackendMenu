@@ -17,5 +17,5 @@ app.use(express.json());
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Serveur backend démarré sur le port ${PORT}`));
+// ❌ REMOVE app.listen() for Vercel!
+module.exports = app;
