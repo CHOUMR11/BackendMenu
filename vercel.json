@@ -1,40 +1,10 @@
 {
   "version": 2,
+  "name": "nodejs-mongodb",
   "builds": [
-    {
-      "src": "client/build/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "app.js",
-      "use": "@vercel/node"
-    }
+    { "src": "app.js", "use": "@vercel/node" }
   ],
   "routes": [
-    {
-      "src": "/health",
-      "dest": "/app.js"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/app.js"
-    },
-    {
-      "src": "/uploads/(.*)",
-      "dest": "/Uploads/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/client/build/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "functions": {
-    "app.js": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  }
+    { "src": "/(.*)", "dest": "/app.js" }
+  ]
 }
