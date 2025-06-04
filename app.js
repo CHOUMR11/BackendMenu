@@ -22,9 +22,9 @@ app.use(cors());
 app.use(express.json());
 
 // ── (Optional) A simple root route to verify the function is alive ────────────
-app.get('/', (req, res) => {
-  res.send('API is working ✅');
-});
+//app.get('/', (req, res) => {
+ // res.send('API is working ✅');
+//});//
 
 // ── Mount your API routes ──────────────────────────────────────────────────────
 app.use('/api/menu', menuRoutes);
