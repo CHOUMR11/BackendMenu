@@ -18,4 +18,6 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 
 // ❌ REMOVE app.listen() for Vercel!
-module.exports = app;
+module.exports = (req, res) => {
+  res.status(200).json({ message: "API Crêperie Backend OK ✅" });
+};
