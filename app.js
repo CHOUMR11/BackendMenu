@@ -8,19 +8,19 @@ const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
-// Connexion à MongoDB
+// Connexion à la base de données
 connectDB();
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
 
-// ✅ Route test
+// ✅ Route test simple
 app.get('/', (req, res) => {
   res.status(200).json({ message: "API Crêperie Backend OK ✅" });
 });
 
-// Routes
+// Routes API
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 
