@@ -2,11 +2,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const connectDB = require('./config/db');  // Ton fichier db.js
+const connectDB = require('./config/db');
 const menuRoutes = require('./routes/menuRoutes');
 const orderRoutes = require('./routes/orderRoutes');
-
-const serverless = require('serverless-http');
 
 const app = express();
 
@@ -27,6 +25,12 @@ async function start() {
     await connectDB();
     dbConnected = true;
     console.log('✅ MongoDB connecté, prêt à répondre');
+
+    // 👇 Render expects this to expose the port
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
   } catch (error) {
     console.error('Erreur connexion MongoDB:', error);
     process.exit(1);
@@ -40,5 +44,3 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-module.exports = serverless(app);
