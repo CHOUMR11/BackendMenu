@@ -1,17 +1,14 @@
-// app.js - Serveur Express pour l’API Crêperie
+// app.js - Serveur Express pour l’API Crêperie (CommonJS)
 
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import 'dotenv/config';
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-import connectDB from './config/db.js';
-import menuRoutes from './routes/menuRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
+const connectDB = require('./config/db');
+const menuRoutes = require('./routes/menuRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const app = express();
 
 // Middleware
@@ -19,15 +16,12 @@ app.use(cors());
 app.use(express.json());
 
 // Connexion à MongoDB
-(async () => {
-  try {
-    await connectDB();
-    console.log('✅ MongoDB connecté');
-  } catch (err) {
+connectDB()
+  .then(() => console.log('✅ MongoDB connecté'))
+  .catch(err => {
     console.error('Erreur connexion MongoDB:', err);
     process.exit(1);
-  }
-})();
+  });
 
 // Routes API
 app.get('/', (req, res) => {
@@ -38,8 +32,9 @@ app.use('/api/orders', orderRoutes);
 
 // En production, servir le frontend Vite build
 if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.resolve(__dirname, '../frontend/dist');
+  const clientBuildPath = path.join(__dirname, 'frontend', 'dist');
   app.use(express.static(clientBuildPath));
+
   app.get('*', (req, res) => {
     res.sendFile(path.join(clientBuildPath, 'index.html'));
   });
