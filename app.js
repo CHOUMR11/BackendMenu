@@ -1,46 +1,52 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+// app.js - Serveur Express pour l’API Crêperie
 
-const connectDB = require('./config/db');
-const menuRoutes = require('./routes/menuRoutes');
-const orderRoutes = require('./routes/orderRoutes');
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
+import connectDB from './config/db.js';
+import menuRoutes from './routes/menuRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.status(200).json({ message: "API Crêperie Backend OK ✅" });
-});
+// Connexion à MongoDB
+(async () => {
+  try {
+    await connectDB();
+    console.log('✅ MongoDB connecté');
+  } catch (err) {
+    console.error('Erreur connexion MongoDB:', err);
+    process.exit(1);
+  }
+})();
 
+// Routes API
+app.get('/', (req, res) => {
+  res.json({ message: 'API Crêperie OK ✅' });
+});
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 
-let dbConnected = false;
-
-async function start() {
-  try {
-    await connectDB();
-    dbConnected = true;
-    console.log('✅ MongoDB connecté, prêt à répondre');
-
-    // 👇 Render expects this to expose the port
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Erreur connexion MongoDB:', error);
-    process.exit(1);
-  }
+// En production, servir le frontend Vite build
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.resolve(__dirname, '../frontend/dist');
+  app.use(express.static(clientBuildPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
 }
-start();
 
-app.use((req, res, next) => {
-  if (!dbConnected) {
-    return res.status(503).json({ error: "Database not connected yet" });
-  }
-  next();
+// Démarrage du serveur
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
