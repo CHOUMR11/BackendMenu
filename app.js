@@ -1,8 +1,5 @@
-// app.js - Serveur Express pour l’API Crêperie (CommonJS)
-
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
@@ -11,37 +8,39 @@ const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Connexion à MongoDB
-connectDB()
-  .then(() => console.log('✅ MongoDB connecté'))
-  .catch(err => {
-    console.error('Erreur connexion MongoDB:', err);
-    process.exit(1);
-  });
-
-// Routes API
 app.get('/', (req, res) => {
-  res.json({ message: 'API Crêperie OK ✅' });
+  res.status(200).json({ message: "API Crêperie Backend OK ✅" });
 });
+
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 
-// En production, servir le frontend Vite build
-if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, 'frontend', 'dist');
-  app.use(express.static(clientBuildPath));
+let dbConnected = false;
 
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientBuildPath, 'index.html'));
-  });
+async function start() {
+  try {
+    await connectDB();
+    dbConnected = true;
+    console.log('✅ MongoDB connecté, prêt à répondre');
+
+    // 👇 Render expects this to expose the port
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Erreur connexion MongoDB:', error);
+    process.exit(1);
+  }
 }
+start();
 
-// Démarrage du serveur
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+app.use((req, res, next) => {
+  if (!dbConnected) {
+    return res.status(503).json({ error: "Database not connected yet" });
+  }
+  next();
 });
