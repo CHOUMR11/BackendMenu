@@ -9,7 +9,8 @@ const orderRoutes = require('./routes/orderRoutes');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.static('dist'))
+
 
 app.get('/', (req, res) => {
   res.status(200).json({ message: "API Crêperie Backend OK ✅" });
