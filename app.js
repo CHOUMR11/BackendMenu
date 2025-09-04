@@ -12,7 +12,7 @@ const app = express();
 
 // Configuration CORS pour autoriser les origines spécifiques
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://frontend30-8-creperie-ktgv.vercel.app'], // Inclure l'URL Vercel
+  origin: ['http://localhost:5173', 'https://frontend30-8-creperie-ktgv.vercel.app'],
   methods: ['GET', 'POST'],
   credentials: true
 }));
@@ -39,7 +39,15 @@ async function start() {
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       
-      const wss = new Server({ server, path: "/ws" });
+      const wss = new Server({ server, path: "/ws", verifyClient: (info, cb) => {
+        const origin = info.req.headers.origin;
+        const allowedOrigins = ['http://localhost:5173', 'https://frontend30-8-creperie-ktgv.vercel.app'];
+        if (allowedOrigins.includes(origin)) {
+          cb(true);
+        } else {
+          cb(false, 403, 'Origine non autorisée');
+        }
+      } });
 
       wss.on("connection", (ws, req) => {
         console.log(`Nouvelle connexion WebSocket depuis ${req.headers.origin}`);
