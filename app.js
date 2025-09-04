@@ -12,7 +12,7 @@ const app = express();
 
 // Configuration CORS pour autoriser les origines spécifiques
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://votre-frontend-url.com'], // Remplacer par l'URL de votre frontend
+  origin: ['http://localhost:5173', 'https://frontend30-8-creperie-ktgv.vercel.app'], // Inclure l'URL Vercel
   methods: ['GET', 'POST'],
   credentials: true
 }));
