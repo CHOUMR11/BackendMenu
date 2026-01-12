@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { Server, WebSocket } = require("ws"); // ← Correction importante : importer WebSocket aussi
+const { Server, WebSocket } = require("ws");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
@@ -11,7 +11,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const app = express();
 
 // Middleware
-app.use(cors()); // Autorise toutes les origines (OK pour dev, resserre en prod si besoin)
+app.use(cors());
 app.use(express.static("dist"));
 app.use(express.json());
 
@@ -22,135 +22,112 @@ app.get("/", (req, res) => {
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 
-// Middleware de secours si DB pas connectée
+// 503 si DB pas encore OK
 let dbConnected = false;
 app.use((req, res, next) => {
   if (!dbConnected) {
-    return res.status(503).json({ error: "Database not connected yet - retry soon" });
+    return res.status(503).json({ error: "Database not connected yet – retrying..." });
   }
   next();
 });
 
-// Fonction pour broadcaster les orders (utilisée par WS)
+// Fonction broadcast (factorisée)
 const broadcastOrders = async (wss) => {
   try {
-    const orders = await mongoose
-      .model("Order")
+    const orders = await mongoose.model("Order")
       .find()
       .populate("items.menuItem", "name price")
       .sort({ createdAt: -1 });
 
-    const bills = orders.map((order) => ({
+    const bills = orders.map(order => ({
       id: order._id.toString(),
       tableNumber: order.tableNumber,
-      orders: [
-        {
-          id: order._id.toString(),
-          date: order.createdAt,
-          items: order.items.map((item) => ({
-            name: item.menuItem.name,
-            price: item.menuItem.price,
-            quantity: item.quantity,
-          })),
-          totalPrice: order.items.reduce(
-            (sum, item) => sum + item.menuItem.price * item.quantity,
-            0
-          ),
-        },
-      ],
-      totalBillAmount: order.items.reduce(
-        (sum, item) => sum + item.menuItem.price * item.quantity,
-        0
-      ),
+      orders: [{
+        id: order._id.toString(),
+        date: order.createdAt,
+        items: order.items.map(item => ({
+          name: item.menuItem.name,
+          price: item.menuItem.price,
+          quantity: item.quantity,
+        })),
+        totalPrice: order.items.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0),
+      }],
+      totalBillAmount: order.items.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0),
     }));
 
-    wss.clients.forEach((client) => {
+    wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({ type: "orders", data: bills }));
       }
     });
   } catch (error) {
-    console.error("Erreur lors de la diffusion des commandes:", error);
+    console.error("Broadcast orders error:", error.message);
   }
 };
 
 async function start() {
   try {
-    // Log l'URI (sans password) pour debug sur Render
-    const safeUri = process.env.MONGO_URI?.replace(/\/\/.*@/, "//<hidden>@") || "MONGO_URI non défini";
-    console.log("Tentative de connexion MongoDB avec :", safeUri);
+    const safeUri = process.env.MONGO_URI
+      ? process.env.MONGO_URI.replace(/\/\/.*@/, "//***@")
+      : "MONGO_URI manquant !";
+    console.log("→ Tentative MongoDB :", safeUri);
 
-    await connectDB(); // ← doit appeler mongoose.connect(process.env.MONGO_URI, { ... })
+    await connectDB();
     dbConnected = true;
-    console.log("✅ MongoDB connecté avec succès");
+    console.log("✅ MongoDB connecté !");
 
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Serveur sur port ${PORT}`);
 
       const wss = new Server({ server });
 
-      wss.on("connection", (ws) => {
-        console.log("Nouvelle connexion WebSocket");
-
-        // Envoi immédiat des orders au nouveau client
-        const sendInitialOrders = async () => {
+      wss.on("connection", ws => {
+        console.log("→ Nouvelle connexion WS");
+        // Envoi initial
+        (async () => {
           try {
-            const orders = await mongoose
-              .model("Order")
+            const orders = await mongoose.model("Order")
               .find()
               .populate("items.menuItem", "name price")
               .sort({ createdAt: -1 });
 
-            const bills = orders.map((order) => ({
+            const bills = orders.map(order => ({
               id: order._id.toString(),
               tableNumber: order.tableNumber,
-              orders: [
-                {
-                  id: order._id.toString(),
-                  date: order.createdAt,
-                  items: order.items.map((item) => ({
-                    name: item.menuItem.name,
-                    price: item.menuItem.price,
-                    quantity: item.quantity,
-                  })),
-                  totalPrice: order.items.reduce(
-                    (sum, item) => sum + item.menuItem.price * item.quantity,
-                    0
-                  ),
-                },
-              ],
-              totalBillAmount: order.items.reduce(
-                (sum, item) => sum + item.menuItem.price * item.quantity,
-                0
-              ),
+              orders: [{
+                id: order._id.toString(),
+                date: order.createdAt,
+                items: order.items.map(item => ({
+                  name: item.menuItem.name,
+                  price: item.menuItem.price,
+                  quantity: item.quantity,
+                })),
+                totalPrice: order.items.reduce((s, i) => s + (i.menuItem.price * i.quantity), 0),
+              }],
+              totalBillAmount: order.items.reduce((s, i) => s + (i.menuItem.price * i.quantity), 0),
             }));
 
             ws.send(JSON.stringify({ type: "orders", data: bills }));
           } catch (err) {
-            console.error("Erreur envoi initial orders:", err);
-            ws.send(JSON.stringify({ type: "error", message: "Erreur récupération commandes" }));
+            console.error("Erreur envoi initial WS:", err.message);
+            ws.send(JSON.stringify({ type: "error", message: "Erreur chargement commandes" }));
           }
-        };
+        })();
 
-        sendInitialOrders();
-
-        ws.on("close", () => console.log("Connexion WebSocket fermée"));
-        ws.on("error", (error) => console.error("Erreur WebSocket:", error));
+        ws.on("close", () => console.log("← WS fermée"));
+        ws.on("error", err => console.error("WS error:", err.message));
       });
 
-      // Optionnel : broadcaster toutes les X secondes (ex: 30s)
-      // setInterval(() => broadcastOrders(wss), 30000);
-
-      // Expose la fonction pour l'utiliser ailleurs (ex: après POST order)
+      // Pour appeler depuis les routes (ex: après création order)
       app.set("broadcastOrders", () => broadcastOrders(wss));
     });
   } catch (error) {
-    console.error("Erreur fatale connexion MongoDB:", error);
-    process.exit(1); // Crash explicite → Render relance
+    console.error("ERREUR FATALE MongoDB :", error.message || error);
+    process.exit(1);
   }
 }
 
 start();
 
-module.exports = app; // Optionnel, utile si tu testes localement
+module.exports = app;
