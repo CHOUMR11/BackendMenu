@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const menuController = require('../controllers/menuController');
+const orderController = require('../controllers/orderController');
 
-// CRUD Menu
-router.get('/', menuController.getMenu);
-router.post('/', menuController.addMenuItem);
-router.put('/:id', menuController.updateMenuItem);
-router.delete('/:id', menuController.deleteMenuItem);
+// CRUD Orders
+router.get('/', orderController.getOrders);
+router.post('/', orderController.addOrder);
+router.put('/:id/status', orderController.updateOrderStatus);
+router.delete('/:id', orderController.deleteOrder);
 
 module.exports = router;
